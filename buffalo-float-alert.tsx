@@ -1,27 +1,25 @@
 "use client"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Waves, Mail } from "lucide-react"
+import { Waves, Mail, AlertCircle } from "lucide-react"
 
 // Hooks
-import { useRiverData } from "./hooks/useRiverData"
+import { useRealTimeData } from "./hooks/useRealTimeData"
 import { useTripCalculator } from "./hooks/useTripCalculator"
 
 // Components
 import { GaugeSelector } from "./components/GaugeSelector"
 import { RiverStatusCard } from "./components/RiverStatusCard"
 import { TripCalculator } from "./components/TripCalculator"
-
-// Legacy components (to be refactored)
 import { RiverConditionsTab } from "./components/RiverConditionsTab"
 import { CommunityTab } from "./components/CommunityTab"
 import { PracticalInfoTab } from "./components/PracticalInfoTab"
+import { AlertManager } from "./components/AlertManager"
+import { WeatherAlertsCard } from "./components/WeatherAlertsCard"
 
 export default function BuffaloFloatAlert() {
-  const riverData = useRiverData()
-  const tripCalculator = useTripCalculator(riverData.currentLevel)
+  const realTimeData = useRealTimeData()
+  const tripCalculator = useTripCalculator(realTimeData.currentLevel)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 to-emerald-50">
@@ -32,17 +30,34 @@ export default function BuffaloFloatAlert() {
             <Waves className="h-8 w-8 text-sky-600 mr-3" aria-hidden="true" />
             <h1 className="text-4xl md:text-5xl font-bold text-slate-800">Buffalo Float Alert</h1>
           </div>
-          <p className="text-xl md:text-2xl text-slate-600 font-medium">Complete Buffalo River trip planning</p>
+          <p className="text-xl md:text-2xl text-slate-600 font-medium">
+            Real-time Buffalo River conditions & trip planning
+          </p>
+          {realTimeData.error && (
+            <div className="max-w-2xl mx-auto mt-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <p className="text-sm text-yellow-800">{realTimeData.error}</p>
+              </div>
+            </div>
+          )}
         </header>
+
+        {/* Weather Alerts */}
+        {realTimeData.weatherAlerts.length > 0 && (
+          <div className="max-w-4xl mx-auto mb-6">
+            <WeatherAlertsCard alerts={realTimeData.weatherAlerts} />
+          </div>
+        )}
 
         {/* Gauge Selection */}
         <GaugeSelector
-          selectedGauge={riverData.selectedGauge}
-          onGaugeChange={riverData.setSelectedGauge}
-          gaugeLocations={riverData.gaugeLocations}
-          lastUpdated={riverData.lastUpdated}
-          isRefreshing={riverData.isRefreshing}
-          onRefresh={riverData.refreshData}
+          selectedGauge={realTimeData.selectedGauge}
+          onGaugeChange={realTimeData.setSelectedGauge}
+          gaugeLocations={realTimeData.gaugeLocations}
+          lastUpdated={realTimeData.lastUpdated}
+          isRefreshing={realTimeData.isRefreshing}
+          onRefresh={realTimeData.refreshData}
         />
 
         {/* Main Content */}
@@ -58,14 +73,17 @@ export default function BuffaloFloatAlert() {
             {/* River Conditions Tab */}
             <TabsContent value="conditions" className="space-y-8">
               <RiverStatusCard
-                currentLevel={riverData.currentLevel}
-                isFloatable={riverData.isFloatable}
-                selectedGaugeData={riverData.selectedGaugeData}
+                currentLevel={realTimeData.currentLevel}
+                isFloatable={realTimeData.isFloatable}
+                selectedGaugeData={realTimeData.selectedGaugeData}
               />
               <RiverConditionsTab
-                gaugeLocations={riverData.gaugeLocations}
-                selectedGauge={riverData.selectedGauge}
-                onGaugeChange={riverData.setSelectedGauge}
+                gaugeLocations={realTimeData.gaugeLocations}
+                selectedGauge={realTimeData.selectedGauge}
+                onGaugeChange={realTimeData.setSelectedGauge}
+                historicalData={realTimeData.historicalData}
+                currentWeather={realTimeData.currentWeather}
+                weatherForecast={realTimeData.weatherForecast}
               />
             </TabsContent>
 
@@ -82,8 +100,8 @@ export default function BuffaloFloatAlert() {
                   riverSections={tripCalculator.riverSections}
                   selectedSectionData={tripCalculator.selectedSectionData}
                   tripCalculation={tripCalculator.tripCalculation}
-                  currentLevel={riverData.currentLevel}
-                  isFloatable={riverData.isFloatable}
+                  currentLevel={realTimeData.currentLevel}
+                  isFloatable={realTimeData.isFloatable}
                   onReset={tripCalculator.resetCalculator}
                 />
 
@@ -91,10 +109,12 @@ export default function BuffaloFloatAlert() {
                 <div className="lg:col-span-2">
                   <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                     <CardHeader>
-                      <CardTitle className="text-xl text-slate-700">River Sections (Coming Soon)</CardTitle>
+                      <CardTitle className="text-xl text-slate-700">River Sections</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-slate-600">Detailed river section information will be displayed here.</p>
+                      <p className="text-slate-600">
+                        Enhanced river section details coming soon with real-time conditions.
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
@@ -113,40 +133,43 @@ export default function BuffaloFloatAlert() {
           </Tabs>
         </main>
 
-        {/* Email Signup */}
+        {/* Alert Manager */}
+        <section className="max-w-4xl mx-auto mt-12">
+          <AlertManager gaugeLocations={realTimeData.gaugeLocations} />
+        </section>
+
+        {/* Email Signup (Legacy - kept for compatibility) */}
         <section className="max-w-md mx-auto mt-12" aria-labelledby="email-signup">
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center pb-4">
               <div className="flex items-center justify-center mb-2">
                 <Mail className="h-6 w-6 text-emerald-600 mr-2" aria-hidden="true" />
                 <CardTitle id="email-signup" className="text-xl text-slate-700">
-                  Email Alerts
+                  Quick Email Alerts
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-center text-slate-600">Get notified when river conditions change!</p>
-              <div className="flex gap-2">
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1"
-                  disabled
-                  aria-label="Email address for alerts"
-                />
-                <Button disabled className="bg-emerald-600 hover:bg-emerald-700">
-                  Notify Me
-                </Button>
+              <div className="text-center py-8">
+                <div className="bg-slate-100 rounded-lg p-6 mb-4">
+                  <Mail className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <p className="text-lg font-medium text-slate-600 mb-2">Coming Soon!</p>
+                  <p className="text-sm text-slate-500">
+                    Quick email alerts are currently in development. Use the Smart Alerts above for instant
+                    notifications.
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-center text-slate-500">Coming soon! Email alerts for river level changes.</p>
             </CardContent>
           </Card>
         </section>
 
         {/* Footer */}
         <footer className="text-center mt-12 text-slate-500">
-          <p className="text-sm">Data provided by USGS • Buffalo National River, Arkansas</p>
-          <p className="text-xs mt-1">Auto-refreshes every 15 minutes</p>
+          <p className="text-sm">Live data from USGS & National Weather Service • Buffalo National River, Arkansas</p>
+          <p className="text-xs mt-1">
+            Auto-refreshes every 15 minutes • Last updated: {realTimeData.lastUpdated.toLocaleTimeString()}
+          </p>
         </footer>
       </div>
     </div>
